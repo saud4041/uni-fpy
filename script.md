@@ -1,6 +1,10 @@
 todo:
 zod in credentials
 add sign up for credentials
+seed
+what happens when a oauth user trys to sign in with github or vice versa
+https://authjs.dev/getting-started/session-management/protecting
+enhance typescript
 
 <!--  -->
 
@@ -300,3 +304,225 @@ if (process.env.NODE_ENV !== "production") globalThis.prismaGlobal = db;
   </Button>
 </form>
 ```
+
+---
+
+npm i @auth/prisma-adapter
+
+```typescript
+adapter: PrismaAdapter(db),
+```
+
+```prisma
+model User {
+  id            String          @id @default(cuid())
+  name          String?
+  email         String?         @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  // Optional for WebAuthn support
+  Authenticator Authenticator[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Optional for WebAuthn support
+model Authenticator {
+  credentialID         String  @unique
+  userId               String
+  providerAccountId    String
+  credentialPublicKey  String
+  counter              Int
+  credentialDeviceType String
+  credentialBackedUp   Boolean
+  transports           String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, credentialID])
+}
+
+```
+
+"db:reset": "prisma migrate reset && prisma migrate dev",
+
+npm run db:reset
+
+go to github and revoke all users and again sign in with github
+show full session
+
+npm run db:studio
+see new things added
+
+lets enhance things
+
+npm i zod
+/sign-in/\_types/schema.ts
+
+const schema = z.object({
+email: z.string().email(),
+password: z.string().min(1),
+});
+
+```typescript auth.ts
+const validatedCredentials = await schema.parseAsync(credentials);
+
+const user = await db.user.findFirst({
+  where: {
+    email: validatedCredentials.email,
+    password: validatedCredentials.password,
+  },
+});
+```
+
+add password to user prisma
+npm run db:reset
+errors are gone
+we want register user by credentials
+
+```typescript sign-up/_components/sign-up.tsx
+const SignUp = () => {
+  return (
+    <form
+      action={async (formData) => {
+        "use server";
+        await signUp(formData);
+        redirect("/sign-in");
+      }}
+    >
+      <Input name="email" placeholder="Email" type="email" />
+      <Input name="password" placeholder="Password" type="password" />
+      <Button variant="default" type="submit">
+        Sign Up
+      </Button>
+    </form>
+  );
+};
+```
+
+db/utils/executeAction.ts
+
+```typescript
+type Options<T> = {
+  actionFn: () => Promise<T>;
+  successMessage?: string;
+};
+
+const executeAction = async <T>({
+  actionFn,
+  successMessage = "The actions was successful",
+}: Options<T>): Promise<{ success: boolean; message: string }> => {
+  try {
+    await actionFn();
+
+    return {
+      success: true,
+      message: successMessage,
+    };
+  } catch (error) {
+    if (isRedirectError(error)) {
+      throw error;
+    }
+
+    return {
+      success: false,
+      message: "An error has occurred during executing the action",
+    };
+  }
+};
+```
+
+sign-up/\_types/schema.ts
+
+```typescript
+const schema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+});
+
+type Schema = z.infer<typeof schema>;
+```
+
+sign-up/\_services/actions.ts
+
+```typescript
+const signUp = async (formData: FormData) => {
+  return executeAction({
+    actionFn: async () => {
+      const email = formData.get("email");
+      const password = formData.get("password");
+      const validatedData = schema.parse({ email, password });
+      await db.user.create({
+        data: {
+          email: validatedData.email.toLocaleLowerCase(),
+          password: validatedData.password,
+        },
+      });
+    },
+    successMessage: "Signed up successfully",
+  });
+};
+```
+
+now go to sign-up and import signUp
+
+```typescript sign-in/pages.tsx
+<>
+  <SignIn />
+  <Button asChild>
+    <Link href="/sign-up">Sign Up</Link>
+  </Button>
+</>
+```
+
+```typescript sign-up/page.tsx
+const Page = () => {
+  return <SignUp />;
+};
+```
+
+continue: why the sign in with credentials does not work
