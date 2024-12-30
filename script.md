@@ -1,4 +1,6 @@
-todo: zod in credentials
+todo:
+zod in credentials
+add sign up for credentials
 
 <!--  -->
 
@@ -189,4 +191,112 @@ but we want a real data base to save our users data
 
 database
 
+prisma extension vscode
+
 npm install prisma --save-dev
+
+src/db/schema.prisma
+
+```prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id       String @id @default(uuid())
+  email    String @unique
+  password String
+}
+```
+
+src/db/data empty folder
+
+DATABASE_URL="file:./data/dev.db"
+
+```json package.json
+  "prisma": {
+    "schema": "src/db/schema.prisma"
+  },
+
+script
+    "db:migrate": "npx prisma migrate dev"
+```
+
+npm run db:migrate, this will generate typescript types, migrations and dev.db and @prisma/client package
+show the dev.db created
+add db/data to git ignore
+`*/db/data`
+
+npm run db:studio
+
+add a admin@admin.com, 1234
+emphasize that never directly save password and always hash of it
+
+now we want to implement it in credentials
+
+```typescript db/utils/db.ts
+import { PrismaClient } from "@prisma/client";
+
+const prismaClientSingleton = () => {
+  return new PrismaClient();
+};
+
+declare const globalThis: {
+  prismaGlobal: ReturnType<typeof prismaClientSingleton>;
+} & typeof global;
+
+const db = globalThis.prismaGlobal ?? prismaClientSingleton();
+
+export default db;
+
+if (process.env.NODE_ENV !== "production") globalThis.prismaGlobal = db;
+```
+
+```typescript
+
+    Credentials({
+      credentials: {
+        email: {},
+        password: {},
+      },
+      authorize: async (credentials) => {
+        const user = await db.user.findFirst({
+          where: { email: credentials.email, password: credentials.password },
+        });
+
+        if (!user) {
+          throw new Error("Invalid credentials.");
+        }
+
+        return user;
+      },
+    }),
+```
+
+```typescript
+<form
+  action={async (formData) => {
+    "use server";
+    try {
+      await signIn("credentials", formData);
+    } catch (error) {
+      if (isRedirectError(error)) {
+        throw error;
+      }
+      console.log("Error during sign in", error);
+    }
+  }}
+>
+  <Input name="email" placeholder="Email" type="email" />
+  <Input name="password" placeholder="Password" type="password" />
+  <Button variant="default" type="submit">
+    Sign in with Credentials
+  </Button>
+</form>
+```

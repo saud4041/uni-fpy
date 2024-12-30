@@ -1,6 +1,7 @@
 import { signIn } from "@/app/(auth)/_utils/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 
 const SignIn = () => {
   return (
@@ -22,6 +23,9 @@ const SignIn = () => {
           try {
             await signIn("credentials", formData);
           } catch (error) {
+            if (isRedirectError(error)) {
+              throw error;
+            }
             console.log("Error during sign in", error);
           }
         }}
