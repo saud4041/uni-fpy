@@ -55,12 +55,6 @@ import { handlers } from "@/app/(auth)/_utils/auth";
 export const { GET, POST } = handlers;
 ```
 
-middleware.ts
-
-```typescript
-export { auth as middleware } from "@/app/(auth)/_utils/auth";
-```
-
 oauth
 https://github.com/settings/developers
 new oauth app
@@ -525,4 +519,4 @@ const Page = () => {
 };
 ```
 
-continue: why the sign in with credentials does not work
+continue: why login does not work? what about strategies and changin them? database ?
