@@ -148,6 +148,38 @@ Credentials({
 
 npx shadcn@latest add input
 
+db/utils/executeAction.ts
+
+```ts
+type Options<T> = {
+  actionFn: () => Promise<T>;
+  successMessage?: string;
+};
+
+const executeAction = async <T>({
+  actionFn,
+  successMessage = "The actions was successful",
+}: Options<T>): Promise<{ success: boolean; message: string }> => {
+  try {
+    await actionFn();
+
+    return {
+      success: true,
+      message: successMessage,
+    };
+  } catch (error) {
+    if (isRedirectError(error)) {
+      throw error;
+    }
+
+    return {
+      success: false,
+      message: "An error has occurred during executing the action",
+    };
+  }
+};
+```
+
 ```ts
 <>
   <form
@@ -164,11 +196,11 @@ npx shadcn@latest add input
   <form
     action={async (formData) => {
       "use server";
-      try {
-        await signIn("credentials", formData);
-      } catch (error) {
-        console.log("Error during sign in", error);
-      }
+      await executeAction({
+        actionFn: async () => {
+          await signIn("credentials", formData);
+        },
+      });
     }}
   >
     <Input name="email" placeholder="Email" type="email" />
@@ -281,14 +313,11 @@ if (process.env.NODE_ENV !== "production") globalThis.prismaGlobal = db;
 <form
   action={async (formData) => {
     "use server";
-    try {
-      await signIn("credentials", formData);
-    } catch (error) {
-      if (isRedirectError(error)) {
-        throw error;
-      }
-      console.log("Error during sign in", error);
-    }
+    await executeAction({
+      actionFn: async () => {
+        await signIn("credentials", formData);
+      },
+    });
   }}
 >
   <Input name="email" placeholder="Email" type="email" />
@@ -438,38 +467,6 @@ const SignUp = () => {
 };
 ```
 
-db/utils/executeAction.ts
-
-```ts
-type Options<T> = {
-  actionFn: () => Promise<T>;
-  successMessage?: string;
-};
-
-const executeAction = async <T>({
-  actionFn,
-  successMessage = "The actions was successful",
-}: Options<T>): Promise<{ success: boolean; message: string }> => {
-  try {
-    await actionFn();
-
-    return {
-      success: true,
-      message: successMessage,
-    };
-  } catch (error) {
-    if (isRedirectError(error)) {
-      throw error;
-    }
-
-    return {
-      success: false,
-      message: "An error has occurred during executing the action",
-    };
-  }
-};
-```
-
 sign-up/\_types/schema.ts
 
 ```ts
@@ -568,13 +565,6 @@ jwt: {
 },
 ```
 
-make below better
-
 ```ts sign-in.tsx
-"use server";
-await executeAction({
-  actionFn: async () => {
-    await signIn("credentials", formData);
-  },
-});
+
 ```
