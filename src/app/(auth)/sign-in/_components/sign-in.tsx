@@ -1,7 +1,7 @@
 import { signIn } from "@/app/(auth)/_utils/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { isRedirectError } from "next/dist/client/components/redirect-error";
+import { executeAction } from "@/db/utils/executeAction";
 
 const SignIn = () => {
   return (
@@ -20,14 +20,11 @@ const SignIn = () => {
       <form
         action={async (formData) => {
           "use server";
-          try {
-            await signIn("credentials", formData);
-          } catch (error) {
-            if (isRedirectError(error)) {
-              throw error;
-            }
-            console.log("Error during sign in", error);
-          }
+          await executeAction({
+            actionFn: async () => {
+              await signIn("credentials", formData);
+            },
+          });
         }}
       >
         <Input name="email" placeholder="Email" type="email" />

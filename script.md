@@ -4,7 +4,7 @@ add sign up for credentials
 seed
 what happens when a oauth user trys to sign in with github or vice versa
 https://authjs.dev/getting-started/session-management/protecting
-enhance typescript
+enhance ts
 
 <!--  -->
 
@@ -18,7 +18,7 @@ npx shadcn@latest init (default, neutral)
 
 npx shadcn@latest add button
 
-```typescript page.tsx
+```ts page.tsx
 const Page = async () => {
   const session = await auth();
 
@@ -40,7 +40,7 @@ npm run dev to see everything works
 
 (auth)/\_utils/auth.ts
 
-```typescript
+```ts
 import NextAuth from "next-auth";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -50,7 +50,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
 app/api/auth/[...nextauth]/route.ts
 
-```typescript
+```ts
 import { handlers } from "@/app/(auth)/_utils/auth";
 export const { GET, POST } = handlers;
 ```
@@ -68,11 +68,11 @@ and paste in env
 AUTH_GITHUB_ID=
 AUTH_GITHUB_SECRET=
 
-```typescript
+```ts
   providers: [GitHub],
 ```
 
-```typescript (auth)/sign-in/_components/sign-in.tsx
+```ts (auth)/sign-in/_components/sign-in.tsx
 const SignIn = () => {
   return (
     <form
@@ -89,7 +89,7 @@ const SignIn = () => {
 };
 ```
 
-```typescript app/(auth)/sign-in/page.tsx
+```ts app/(auth)/sign-in/page.tsx
 const Page = () => {
   const session = await auth();
 
@@ -105,7 +105,7 @@ do sign up we github
 go to app on github and see user has added
 see user's session
 
-```typescript (auth)/_components/sign-out
+```ts (auth)/_components/sign-out
 "use client";
 const SignOut = () => {
   const handleSignOut = async () => {
@@ -126,7 +126,7 @@ put it in page.tsx and show user logs out and again log in
 
 now for credentials
 
-```typescript
+```ts
 Credentials({
   credentials: {
     email: {},
@@ -148,7 +148,7 @@ Credentials({
 
 npx shadcn@latest add input
 
-```typescript
+```ts
 <>
   <form
     action={async () => {
@@ -226,7 +226,7 @@ script
     "db:migrate": "npx prisma migrate dev"
 ```
 
-npm run db:migrate, this will generate typescript types, migrations and dev.db and @prisma/client package
+npm run db:migrate, this will generate ts types, migrations and dev.db and @prisma/client package
 show the dev.db created
 add db/data to git ignore
 `*/db/data`
@@ -238,7 +238,7 @@ emphasize that never directly save password and always hash of it
 
 now we want to implement it in credentials
 
-```typescript db/utils/db.ts
+```ts db/utils/db.ts
 import { PrismaClient } from "@prisma/client";
 
 const prismaClientSingleton = () => {
@@ -256,7 +256,7 @@ export default db;
 if (process.env.NODE_ENV !== "production") globalThis.prismaGlobal = db;
 ```
 
-```typescript
+```ts
 
     Credentials({
       credentials: {
@@ -277,7 +277,7 @@ if (process.env.NODE_ENV !== "production") globalThis.prismaGlobal = db;
     }),
 ```
 
-```typescript
+```ts
 <form
   action={async (formData) => {
     "use server";
@@ -303,7 +303,7 @@ if (process.env.NODE_ENV !== "production") globalThis.prismaGlobal = db;
 
 npm i @auth/prisma-adapter
 
-```typescript
+```ts
 adapter: PrismaAdapter(db),
 ```
 
@@ -402,7 +402,7 @@ email: z.string().email(),
 password: z.string().min(1),
 });
 
-```typescript auth.ts
+```ts auth.ts
 const validatedCredentials = await schema.parseAsync(credentials);
 
 const user = await db.user.findFirst({
@@ -418,7 +418,7 @@ npm run db:reset
 errors are gone
 we want register user by credentials
 
-```typescript sign-up/_components/sign-up.tsx
+```ts sign-up/_components/sign-up.tsx
 const SignUp = () => {
   return (
     <form
@@ -440,7 +440,7 @@ const SignUp = () => {
 
 db/utils/executeAction.ts
 
-```typescript
+```ts
 type Options<T> = {
   actionFn: () => Promise<T>;
   successMessage?: string;
@@ -472,7 +472,7 @@ const executeAction = async <T>({
 
 sign-up/\_types/schema.ts
 
-```typescript
+```ts
 const schema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
@@ -483,7 +483,7 @@ type Schema = z.infer<typeof schema>;
 
 sign-up/\_services/actions.ts
 
-```typescript
+```ts
 const signUp = async (formData: FormData) => {
   return executeAction({
     actionFn: async () => {
@@ -504,7 +504,7 @@ const signUp = async (formData: FormData) => {
 
 now go to sign-up and import signUp
 
-```typescript sign-in/pages.tsx
+```ts sign-in/pages.tsx
 <>
   <SignIn />
   <Button asChild>
@@ -513,10 +513,68 @@ now go to sign-up and import signUp
 </>
 ```
 
-```typescript sign-up/page.tsx
+```ts sign-up/page.tsx
 const Page = () => {
   return <SignUp />;
 };
 ```
 
-continue: why login does not work? what about strategies and changin them? database ?
+when it comes to sign in with credentials with auth js with database session things become a little complete because we need to expand the auth config
+
+```ts
+callbacks: {
+  async jwt({ token, account }) {
+    if (account?.provider === "credentials") {
+      token.credentials = true;
+    }
+    return token;
+  },
+},
+```
+
+show what callbacks returns
+
+```ts
+const adapter = PrismaAdapter(db);
+
+export const { handlers, signIn, signOut, auth } = NextAuth({
+  adapter,
+```
+
+```ts
+jwt: {
+  encode: async function (params) {
+    if (params.token?.credentials) {
+      const sessionToken = uuid();
+
+      if (!params.token.sub) {
+        throw new Error("No user ID found in token");
+      }
+
+      const createdSession = await adapter?.createSession?.({
+        sessionToken: sessionToken,
+        userId: params.token.sub,
+        expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      });
+
+      if (!createdSession) {
+        throw new Error("Failed to create session");
+      }
+
+      return sessionToken;
+    }
+    return defaultEncode(params);
+  },
+},
+```
+
+make below better
+
+```ts sign-in.tsx
+"use server";
+await executeAction({
+  actionFn: async () => {
+    await signIn("credentials", formData);
+  },
+});
+```
