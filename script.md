@@ -438,7 +438,7 @@ DATABASE_URL="file:./data/dev.db"
 
 ```json package.json
   "prisma": {
-    "schema": "src/db/schema.prisma"
+    "schema": "src/lib/db/schema.prisma"
   },
 
 script

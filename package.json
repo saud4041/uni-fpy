@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "prisma": {
-    "schema": "src/db/schema.prisma"
+    "schema": "src/lib/db/schema.prisma"
   },
   "scripts": {
     "dev": "next dev --turbopack",
