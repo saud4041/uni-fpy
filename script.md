@@ -8,6 +8,36 @@ enhance ts
 
 # starting template
 
+```ts src/lib/executeAction.ts
+type Options<T> = {
+  actionFn: () => Promise<T>;
+  successMessage?: string;
+};
+
+const executeAction = async <T>({
+  actionFn,
+  successMessage = "The actions was successful",
+}: Options<T>): Promise<{ success: boolean; message: string }> => {
+  try {
+    await actionFn();
+
+    return {
+      success: true,
+      message: successMessage,
+    };
+  } catch (error) {
+    if (isRedirectError(error)) {
+      throw error;
+    }
+
+    return {
+      success: false,
+      message: "An error has occurred during executing the action",
+    };
+  }
+};
+```
+
 ```ts sign-in page.tsx
 const Page = async () => {
   return (
@@ -337,38 +367,6 @@ Credentials({
 
 npx shadcn@latest add input
 
-db/utils/executeAction.ts
-
-```ts
-type Options<T> = {
-  actionFn: () => Promise<T>;
-  successMessage?: string;
-};
-
-const executeAction = async <T>({
-  actionFn,
-  successMessage = "The actions was successful",
-}: Options<T>): Promise<{ success: boolean; message: string }> => {
-  try {
-    await actionFn();
-
-    return {
-      success: true,
-      message: successMessage,
-    };
-  } catch (error) {
-    if (isRedirectError(error)) {
-      throw error;
-    }
-
-    return {
-      success: false,
-      message: "An error has occurred during executing the action",
-    };
-  }
-};
-```
-
 ```ts
 <>
   <form
@@ -459,7 +457,7 @@ emphasize that never directly save password and always hash of it
 
 now we want to implement it in credentials
 
-```ts db/utils/db.ts
+```ts src/lib/db/db.ts
 import { PrismaClient } from "@prisma/client";
 
 const prismaClientSingleton = () => {
