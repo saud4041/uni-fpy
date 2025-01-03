@@ -425,7 +425,6 @@ script
 npm run db:migrate, this will generate ts types, migrations and dev.db and @prisma/client package
 show the dev.db created
 add db/data to git ignore
-`*/lib/db/data`
 
 npm run db:studio
 
