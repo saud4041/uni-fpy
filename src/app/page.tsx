@@ -1,7 +1,5 @@
-import { SignOut } from "@/app/(auth)/_components/sign-out";
-import { auth } from "@/app/(auth)/_utils/auth";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import { SignOut } from "@/components/sign-out";
+import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
 const Page = async () => {
@@ -10,12 +8,11 @@ const Page = async () => {
 
   return (
     <>
-      <pre>{JSON.stringify(session, null, 2)}</pre>
-      {!session && (
-        <Button asChild>
-          <Link href="/sign-in">Sign In</Link>
-        </Button>
-      )}
+      <div className="bg-gray-100 rounded-lg p-4 text-center mb-6">
+        <p className="text-gray-600">Signed in as:</p>
+        <p className="font-medium">{session.user?.email}</p>
+      </div>
+
       <SignOut />
     </>
   );

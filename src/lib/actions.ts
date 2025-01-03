@@ -1,4 +1,4 @@
-import { schema } from "@/app/(auth)/sign-up/_types/schema";
+import { schema } from "@/lib/schema";
 import db from "@/db/utils/db";
 import { executeAction } from "@/db/utils/executeAction";
 
